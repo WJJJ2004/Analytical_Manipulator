@@ -9,3 +9,9 @@ main_node:
     aproach_distance: 100.00
     duration: 5.00
     dt: 0.1
+    theta1_max: 3.14
+    theta1_min: -3.14
+    theta2_max: 3.14
+    theta2_min: -3.14
+    theta3_max: 3.14
+    theta3_min: -3.14

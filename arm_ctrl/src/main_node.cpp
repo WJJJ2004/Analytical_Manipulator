@@ -18,11 +18,19 @@ MainNode::MainNode()
   this->declare_parameter<double>("D2", 100.00);
   this->declare_parameter<double>("D3", 100.00);
   this->declare_parameter<double>("approach_distance", 100.0);      // 접근 거리
-  this->declare_parameter<double>("duration", 5.0);               // trajectory 생성 시간
-  this->declare_parameter<double>("dt", 0.1);                     // trajectory 생성 시간 간격
+  this->declare_parameter<double>("duration", 5.0);                 // trajectory 생성 시간
+  this->declare_parameter<double>("dt", 0.1);                       // trajectory 생성 시간 간격
+  this->declare_parameter<double>("theta1_max", 3.14);
+  this->declare_parameter<double>("theta1_min", -3.14);
+  this->declare_parameter<double>("theta2_max", 3.14);
+  this->declare_parameter<double>("theta2_min", -3.14);
+  this->declare_parameter<double>("theta3_max", 3.14);
+  this->declare_parameter<double>("theta3_min", -3.14);
+
   this->get_parameter("approach_distance", approach_distance_);
   this->get_parameter("duration", duration_);
   this->get_parameter("dt", dt_);
+
 
   // publishers
   ik_pub_ = this->create_publisher<humanoid_interfaces::msg::Master2IkMsg>(     // IK WALK로 보행 명령 퍼블리시
@@ -36,11 +44,11 @@ MainNode::MainNode()
 
   // subscribers
   imu_sub_ = this->create_subscription<humanoid_interfaces::msg::ImuMsg>(
-    "/imu_data", 10, std::bind(&MainNode::imuCallback, this, _1)); // IMU 데이터 받음
+    "/imu_data", 10, std::bind(&MainNode::imuCallback, this, _1));      // IMU 데이터 받음
   cmd_sub_ = this->create_subscription<arm_ctrl::msg::ArmCtrlCmd>(
-    "/arm_cmd", 10, std::bind(&MainNode::cmdCallback, this, _1));   // 비전 모듈에서 EE 좌표를 받음
+    "/arm_cmd", 10, std::bind(&MainNode::cmdCallback, this, _1));       // 비전 모듈에서 EE 좌표를 받음
   flag_sub_ = this->create_subscription<arm_ctrl::msg::ArmCtrlFlag>(
-    "/arm_flag", 10, std::bind(&MainNode::flagCallback, this, _1)); // 마스터 준비 상태를 받음
+    "/arm_flag", 10, std::bind(&MainNode::flagCallback, this, _1));     // 마스터 준비 상태를 받음
 
   timer_ = this->create_wall_timer(100ms, std::bind(&MainNode::mainLoop, this));
   ik_module_ = std::make_unique<IKModule>(this);
@@ -50,7 +58,8 @@ MainNode::MainNode()
 void MainNode::imuCallback(const humanoid_interfaces::msg::ImuMsg::SharedPtr msg)
 {
   imu_yaw_ = msg->yaw;
-  if (!imu_yaw_set_) {
+  if (!imu_yaw_set_)
+  {
     initial_yaw_ = imu_yaw_;
     imu_yaw_set_ = true;
   }
@@ -93,27 +102,27 @@ void MainNode::publishJointCommands(const Eigen::Vector3d &q, bool is_target_on_
   trajectory_msgs::msg::JointTrajectoryPoint traj_point;
   traj_point.positions.resize(22, 0.0);
 
-  // 조인트 각도 설정
-  if (is_target_on_right) {
-    angle_msg.rotate_0 = -1.0 * q(0);
-    angle_msg.rotate_2 = -1.0 * q(1);
-    angle_msg.rotate_4 = -1.0 * q(2);
-
-    angle_msg.rotate_1 = angle_msg.rotate_3 = angle_msg.rotate_5 = 0.0;
-
-    traj_point.positions[0] = angle_msg.rotate_0;
-    traj_point.positions[2] = angle_msg.rotate_2;
-    traj_point.positions[4] = angle_msg.rotate_4;
-  } else {
+  if (is_target_on_right) {           // 오른팔인 경우 IK 미러링
     angle_msg.rotate_0 = angle_msg.rotate_2 = angle_msg.rotate_4 = 0.0;
 
-    angle_msg.rotate_1 = q(0);
-    angle_msg.rotate_3 = q(1);
-    angle_msg.rotate_5 = q(2);
+    angle_msg.rotate_1 = -1.0 * q(0);
+    angle_msg.rotate_3 = -1.0 * q(1);
+    angle_msg.rotate_5 = -1.0 * q(2);
 
     traj_point.positions[1] = angle_msg.rotate_1;
     traj_point.positions[3] = angle_msg.rotate_3;
     traj_point.positions[5] = angle_msg.rotate_5;
+  }
+  else {
+    angle_msg.rotate_1 = angle_msg.rotate_3 = angle_msg.rotate_5 = 0.0;   // 왼팔인 경우 IK 그대로 사용
+
+    angle_msg.rotate_0 = q(0);
+    angle_msg.rotate_2 = q(1);
+    angle_msg.rotate_4 = q(2);
+
+    traj_point.positions[0] = angle_msg.rotate_0;
+    traj_point.positions[2] = angle_msg.rotate_2;
+    traj_point.positions[4] = angle_msg.rotate_4;
   }
 
   traj_point.time_from_start = rclcpp::Duration::from_seconds(0.1);
@@ -158,7 +167,7 @@ void MainNode::mainLoop()
   switch(loop_squence)
   {
     case 0: // task space까지 접근 or IK 모듈로 접근 가능 여부 확인
-      if (ik_module_->isReachable(current_target, is_target_on_right)) {
+      if (ik_module_->isReachable(current_target)) {
         loop_squence = 1;
       } else {
         RCLCPP_WARN(this->get_logger(), "Target unreachable.");
@@ -184,7 +193,7 @@ void MainNode::mainLoop()
       if (trajectory_index_ < trajectory_.size())
       {
         auto point = trajectory_[trajectory_index_++]; // Eigen::Vector3d
-        auto q_opt = ik_module_->computeIK(point, is_target_on_right); // optional
+        auto q_opt = ik_module_->computeIK(point); // optional
         if (q_opt.has_value())
         {
           auto q = q_opt.value();

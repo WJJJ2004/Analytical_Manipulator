@@ -9,6 +9,12 @@ IKModule::IKModule(rclcpp::Node* node) {
     node->get_parameter("D1", D1);
     node->get_parameter("D2", D2);
     node->get_parameter("D3", D3);
+    node->get_parameter("theta1_max", theta1_max);
+    node->get_parameter("theta1_min", theta1_min);
+    node->get_parameter("theta2_max", theta2_max);
+    node->get_parameter("theta2_min", theta2_min);
+    node->get_parameter("theta3_max", theta3_max);
+    node->get_parameter("theta3_min", theta3_min);
 
     offset << L3, L2, -L1;
     R_base << 0, 0, 1,
@@ -46,7 +52,7 @@ std::vector<Eigen::Vector3d> IKModule::generateIKCandidates(const Eigen::Vector3
     double z = target_local.z();
 
     if(std::sqrt(x*x + y*y + z*z) > D1 + D2 + D3) {
-        std::cerr << "[IK] Target out of Task Space: " << target_local.transpose() << std::endl;
+        std::cerr << "[IK] TARGET OUT OF TASK SPACE: " << target_local.transpose() << std::endl;
         return candidates; // OUT OF Task Space
     }
 
@@ -62,7 +68,7 @@ std::vector<Eigen::Vector3d> IKModule::generateIKCandidates(const Eigen::Vector3
     double C3 = C3_num / C3_den;
 
     if (std::abs(C3) > 1.0) {
-        std::cerr << "[IK] C3 out of bounds: " << C3 << std::endl;
+        std::cerr << "[IK] C3 OUT OF BOUND: " << C3 << std::endl;
         return candidates;
     }
 
@@ -79,7 +85,7 @@ std::vector<Eigen::Vector3d> IKModule::generateIKCandidates(const Eigen::Vector3
         double C2 = C2_num / C2_den;
 
         if (std::abs(C2) > 1.0) {
-            std::cerr << "[IK] C2 out of bounds: " << C2 << std::endl;
+            std::cerr << "[IK] C2 OUT OF BOUND: " << C2 << std::endl;
             continue;
         }
 
@@ -99,7 +105,22 @@ std::optional<Eigen::Vector3d> IKModule::sortingIKCandidates(const std::vector<E
     double best_error = std::numeric_limits<double>::infinity();
     Eigen::Vector3d best_q;
 
-    for (const auto& q : candidates) {
+    for (const auto& q : candidates)
+    {
+        // self collision joint limit check
+        if (q[0] < theta1_min || q[0] > theta1_max ||
+            q[1] < theta2_min || q[1] > theta2_max ||
+            q[2] < theta3_min || q[2] > theta3_max)
+        {
+            std::cerr << "[IK] JOINT LIMIT VIOLATION: ("
+                      << q[0] << ", " << q[1] << ", " << q[2] << ")" << std::endl;
+            continue;
+
+            // ************************************************************************
+            // self collision joint limit을 넘는 경우 >> 예외 처리 코드 추가
+            // ************************************************************************
+        }
+
         // Forward kinematics to get end-effector position in world frame
         Eigen::Vector3d ee_world = R_base * forwardKinematics(q).block<3,1>(0,3) + offset;
         double err = (ee_world - target_world).norm();
@@ -112,18 +133,17 @@ std::optional<Eigen::Vector3d> IKModule::sortingIKCandidates(const std::vector<E
     }
 
     // ************************************************************************
-    // 아래에 이전 각도를 기반으로 해를 소팅 및 self collsion joint limit 기반 소팅 코드 추가
+    // 아래에 이전 각도를 기반으로 해를 소팅 코드 추가
     // ************************************************************************
 
-    if (best_error < 1e-3)
+    if (best_error < 0.001)
         return best_q;
     else
         return std::nullopt;
 }
 
-std::optional<Eigen::Vector3d> IKModule::computeIK(const Eigen::Vector3d& target_position, bool is_target_on_right) {
+std::optional<Eigen::Vector3d> IKModule::computeIK(const Eigen::Vector3d& target_position) {
     Eigen::Vector3d target = target_position;
-    if (is_target_on_right) target.y() *= -1;
 
     Eigen::Vector3d target_local = R_base.transpose() * (target - offset);
     auto candidates = generateIKCandidates(target_local);

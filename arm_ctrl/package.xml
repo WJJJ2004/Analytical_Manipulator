@@ -3,7 +3,7 @@
   <name>arm_ctrl</name>
   <version>0.1.0</version>
   <description>3DOF Arm controller with trajectory and IK handling</description>
-  <maintainer email="your_email@example.com">Your Name</maintainer>
+  <maintainer email="dldnjswns7412@gmail.com">Your Name</maintainer>
   <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>

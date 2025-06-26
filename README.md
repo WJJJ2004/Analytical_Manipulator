@@ -20,6 +20,7 @@
 이 패키지는 Corridor Race 4: Loco‑Manipulation 미션에서 휴머노이드 로봇의 팔 제어를 위해 개발되었습니다.  
 - YAML 기반 링크/오프셋/튜닝 파라미터 로딩  
 - 캠별 스위치 상대 좌표 → EE 접근 경로 자동 생성 및 IK 계산
+- 관련 매트랩 코드 레포 링크: https://github.com/WJJJ2004/Analytical_IK_solver
 
 ---
 

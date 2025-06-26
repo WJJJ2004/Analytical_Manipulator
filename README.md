@@ -11,3 +11,5 @@
   - `controller.yaml`: Gazebo용 controller 설정
 
 Ananlytical IK 매트랩 코드: https://github.com/WJJJ2004/Analytical_IK_solver
+
+Parameter 튜닝 예시 : https://github.com/WJJJ2004/Analytical_Manipulator/issues/1#issue-3177506858

@@ -1,0 +1,11 @@
+main_node:
+  ros__parameters:
+    L1: 100.00
+    L2: 100.00
+    L3: 100.00
+    D1: 100.00
+    D2: 100.00
+    D3: 100.00
+    aproach_distance: 100.00
+    duration: 5.00
+    dt: 0.1

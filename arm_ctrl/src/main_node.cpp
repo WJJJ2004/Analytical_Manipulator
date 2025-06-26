@@ -1,15 +1,3 @@
-/*
-  06/25
-  설계 아직 안나와서 시뮬상 디버깅 의미 없음
-  IK 잘됨
-  IMU 값 없어서 path planner에 디버깅 코드 들어가 있음
-  path plnner 관련 로직 개선이랑 각도 소팅 관련 로직 추가해야함 >> 하드웨어 디버깅 필요
-  오른팔 반전 처리 아직 안함
-  IK에서 거리기반 task space 안인데  abs cos 값이 1보다 큰 경우에 대한 고민 필요함
-  시나리오 개선 ? 마스터링 관련 논의 필요
-  각도 오버플로우 나는거 아닌가 ??
-*/
-
 #include "main_node.hpp"            // 클래스 정의
 #include <memory>                   // std::make_shared
 #include <functional>               // std::placeholders

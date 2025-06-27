@@ -1,10 +1,11 @@
 /*
-  06/25 수정
-  설계 아직 안나와서 시뮬상 디버깅 의미 없음
+  06/26 수정
+  시뮬 디버깅 중 URDF 제작 완
+  joint cost sortting 알고리즘 추가
+  FK 소팅 관련 추가 디버깅 필요
   IK 잘됨
-  IMU 값 없어서 path planner에 디버깅 코드 들어가 있음
-  path plnner 관련 로직 개선이랑 각도 소팅 관련 로직 추가해야함 >> 하드웨어 디버깅 필요
-  시나리오 개선? 마스터링 관련 논의 필요
+  path planning 잘됨
+  마스터 관련 논의 필요
 */
 
 #include "main_node.hpp"            // 클래스 정의

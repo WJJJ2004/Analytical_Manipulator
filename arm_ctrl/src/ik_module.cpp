@@ -15,15 +15,22 @@ IKModule::IKModule(rclcpp::Node* node) {
     node->get_parameter("theta2_min", theta2_min);
     node->get_parameter("theta3_max", theta3_max);
     node->get_parameter("theta3_min", theta3_min);
+    node->get_parameter("error_threshold", error_threshold);
 
+    std::cout << "\033[1;33m";
+    std::cout << "[IK] L1: " << L1 << ", L2: " << L2 << ", L3: " << L3 << "\n";
+    std::cout << "[IK] D1: " << D1 << ", D2: " << D2 << ", D3: " << D3 << "\n";
+    std::cout << "[IK] theta1 range: [" << theta1_min << ", " << theta1_max << "]\n";
+    std::cout << "[IK] theta2 range: [" << theta2_min << ", " << theta2_max << "]\n";
+    std::cout << "[IK] theta3 range: [" << theta3_min << ", " << theta3_max << "]\n";
+    std::cout << "[IK] error threshold: " << error_threshold << "\n";
+    std::cout << "\033[0m";
+
+    prev_q << 0, 0, 0;
     offset << L3, L2, -L1;
     R_base << 0, 0, 1,
               0, 1, 0,
              -1, 0, 0;
-
-    std::cerr << "[IK] L1: " << L1 << ", L2: " << L2 << ", L3: " << L3 << "\n";
-    std::cerr << "[IK] D1: " << D1 << ", D2: " << D2 << ", D3: " << D3 << "\n";
-    std::cerr << "[IK] Initialized IKModule.\n";
 }
 
 Eigen::Matrix4d IKModule::computeDH(double alpha, double a, double d, double theta) {
@@ -101,13 +108,15 @@ std::vector<Eigen::Vector3d> IKModule::generateIKCandidates(const Eigen::Vector3
     return candidates;
 }
 
-std::optional<Eigen::Vector3d> IKModule::sortingIKCandidates(const std::vector<Eigen::Vector3d>& candidates, const Eigen::Vector3d& target_world) {
-    double best_error = std::numeric_limits<double>::infinity();
+std::optional<Eigen::Vector3d> IKModule::sortingIKCandidates(const std::vector<Eigen::Vector3d>& candidates, const Eigen::Vector3d& target_world)
+{
+    double min_joint_change = std::numeric_limits<double>::infinity();
     Eigen::Vector3d best_q;
+    bool found_valid = false;
 
     for (const auto& q : candidates)
     {
-        // self collision joint limit check
+        // Joint limit check
         if (q[0] < theta1_min || q[0] > theta1_max ||
             q[1] < theta2_min || q[1] > theta2_max ||
             q[2] < theta3_min || q[2] > theta3_max)
@@ -115,31 +124,33 @@ std::optional<Eigen::Vector3d> IKModule::sortingIKCandidates(const std::vector<E
             std::cerr << "[IK] JOINT LIMIT VIOLATION: ("
                       << q[0] << ", " << q[1] << ", " << q[2] << ")" << std::endl;
             continue;
-
-            // ************************************************************************
-            // self collision joint limit을 넘는 경우 >> 예외 처리 코드 추가
-            // ************************************************************************
         }
 
-        // Forward kinematics to get end-effector position in world frame
+        // FK로 EE 위치 계산
         Eigen::Vector3d ee_world = R_base * forwardKinematics(q).block<3,1>(0,3) + offset;
-        double err = (ee_world - target_world).norm();
-        if (err < best_error) {
-            best_error = err;
-            best_q = q;
+        double pos_error = (ee_world - target_world).norm();
 
-            // 허근 소팅
+        // 너무 큰 허근 제거
+        if (pos_error > error_threshold)
+            continue;
+
+        // 조인트 변화량 최소인 해 선택
+        double joint_diff = (q - prev_q).norm();
+        if (joint_diff < min_joint_change)
+        {
+            min_joint_change = joint_diff;
+            best_q = q;
+            found_valid = true;
         }
     }
 
-    // ************************************************************************
-    // 아래에 이전 각도를 기반으로 해를 소팅 코드 추가
-    // ************************************************************************
-
-    if (best_error < 0.001)
+    if (found_valid) {
+        prev_q = best_q;  // 이전 해 업데이트 (optional)
         return best_q;
-    else
+    }
+    else {
         return std::nullopt;
+    }
 }
 
 std::optional<Eigen::Vector3d> IKModule::computeIK(const Eigen::Vector3d& target_position) {

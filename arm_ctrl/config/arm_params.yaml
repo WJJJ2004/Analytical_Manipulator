@@ -1,17 +1,18 @@
 main_node:
   ros__parameters:
-    L1: 100.00
-    L2: 100.00
-    L3: 100.00
-    D1: 100.00
-    D2: 100.00
-    D3: 100.00
+    L1: 16.95
+    L2: 85.30
+    L3: 190.00
+    D1: 50.00
+    D2: 200.00
+    D3: 250.00
     aproach_distance: 100.00
     duration: 5.00
     dt: 0.1
-    theta1_max: 3.14
-    theta1_min: -3.14
-    theta2_max: 3.14
-    theta2_min: -3.14
-    theta3_max: 3.14
-    theta3_min: -3.14
+    theta1_max: 3.05433
+    theta1_min: -0.0872665
+    theta2_max: 1.65806
+    theta2_min: -1.65806
+    theta3_max: 2.70526
+    theta3_min: -2.70526
+    error_threshold: 0.01

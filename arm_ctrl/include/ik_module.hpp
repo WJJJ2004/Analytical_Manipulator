@@ -15,11 +15,13 @@ public:
 private:
   Eigen::Vector3d offset;
   Eigen::Matrix3d R_base;
+  Eigen::Vector3d prev_q;   // Previous joint angles for sorting candidates
 
   double L1, L2, L3, D1, D2, D3;
   double theta1_max, theta1_min;
   double theta2_max, theta2_min;
   double theta3_max, theta3_min;
+  double error_threshold;
 
   Eigen::Matrix4d computeDH(double alpha, double a, double d, double theta);
   Eigen::Matrix4d forwardKinematics(const Eigen::Vector3d& q);

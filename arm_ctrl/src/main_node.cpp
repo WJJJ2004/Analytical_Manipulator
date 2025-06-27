@@ -1,3 +1,12 @@
+/*
+  06/25 수정
+  설계 아직 안나와서 시뮬상 디버깅 의미 없음
+  IK 잘됨
+  IMU 값 없어서 path planner에 디버깅 코드 들어가 있음
+  path plnner 관련 로직 개선이랑 각도 소팅 관련 로직 추가해야함 >> 하드웨어 디버깅 필요
+  시나리오 개선? 마스터링 관련 논의 필요
+*/
+
 #include "main_node.hpp"            // 클래스 정의
 #include <memory>                   // std::make_shared
 #include <functional>               // std::placeholders
@@ -26,6 +35,7 @@ MainNode::MainNode()
   this->declare_parameter<double>("theta2_min", -3.14);
   this->declare_parameter<double>("theta3_max", 3.14);
   this->declare_parameter<double>("theta3_min", -3.14);
+  this->declare_parameter<double>("error_threshold", 0.01);           // IK-FK 정규화 오차 임계값
 
   this->get_parameter("approach_distance", approach_distance_);
   this->get_parameter("duration", duration_);
@@ -102,11 +112,13 @@ void MainNode::publishJointCommands(const Eigen::Vector3d &q, bool is_target_on_
   trajectory_msgs::msg::JointTrajectoryPoint traj_point;
   traj_point.positions.resize(22, 0.0);
 
-  if (is_target_on_right) {           // 오른팔인 경우 IK 미러링
-    angle_msg.rotate_0 = angle_msg.rotate_2 = angle_msg.rotate_4 = 0.0;
+  if (is_target_on_right) {                   // 오른팔인 경우 IK 미러링
+    angle_msg.rotate_0 = 0.0;
+    angle_msg.rotate_2 = 0.0;
+    angle_msg.rotate_4 = 0.0;
 
     angle_msg.rotate_1 = -1.0 * q(0);
-    angle_msg.rotate_3 = -1.0 * q(1);
+    angle_msg.rotate_3 = q(1);
     angle_msg.rotate_5 = -1.0 * q(2);
 
     traj_point.positions[1] = angle_msg.rotate_1;
@@ -114,10 +126,12 @@ void MainNode::publishJointCommands(const Eigen::Vector3d &q, bool is_target_on_
     traj_point.positions[5] = angle_msg.rotate_5;
   }
   else {
-    angle_msg.rotate_1 = angle_msg.rotate_3 = angle_msg.rotate_5 = 0.0;   // 왼팔인 경우 IK 그대로 사용
+    angle_msg.rotate_1 = 0.0;
+    angle_msg.rotate_3 = 0.0;
+    angle_msg.rotate_5 = 0.0;   // 왼팔인 경우 IK 그대로 사용
 
     angle_msg.rotate_0 = q(0);
-    angle_msg.rotate_2 = q(1);
+    angle_msg.rotate_2 = -1.0*q(1);
     angle_msg.rotate_4 = q(2);
 
     traj_point.positions[0] = angle_msg.rotate_0;

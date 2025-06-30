@@ -121,7 +121,7 @@ std::optional<Eigen::Vector3d> IKModule::sortingIKCandidates(const std::vector<E
             q[1] < theta2_min || q[1] > theta2_max ||
             q[2] < theta3_min || q[2] > theta3_max)
         {
-            std::cerr << "[IK] JOINT LIMIT VIOLATION: ("
+            std::cerr << "[IK] CANDIDATE JOINT LIMIT VIOLATION: ("
                       << q[0] << ", " << q[1] << ", " << q[2] << ")" << std::endl;
             continue;
         }

@@ -6,7 +6,7 @@ main_node:
     D1: 50.00
     D2: 200.00
     D3: 250.00
-    aproach_distance: 100.00
+    aproach_distance: 1000.00
     duration: 5.00
     dt: 0.1
     theta1_max: 3.05433

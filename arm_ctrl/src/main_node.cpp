@@ -119,7 +119,7 @@ void MainNode::publishJointCommands(const Eigen::Vector3d &q, bool is_target_on_
 
     angle_msg.rotate_1 = -1.0 * q(0);
     angle_msg.rotate_3 = q(1);
-    angle_msg.rotate_5 = -1.0 * q(2);
+    angle_msg.rotate_5 = q(2);
 
     traj_point.positions[1] = angle_msg.rotate_1;
     traj_point.positions[3] = angle_msg.rotate_3;
@@ -132,7 +132,7 @@ void MainNode::publishJointCommands(const Eigen::Vector3d &q, bool is_target_on_
 
     angle_msg.rotate_0 = q(0);
     angle_msg.rotate_2 = -1.0*q(1);
-    angle_msg.rotate_4 = q(2);
+    angle_msg.rotate_4 = -1.0*q(2);
 
     traj_point.positions[0] = angle_msg.rotate_0;
     traj_point.positions[2] = angle_msg.rotate_2;
@@ -178,6 +178,9 @@ void MainNode::mainLoop()
   Eigen::Vector3d current_target(ee_target_.x, ee_target_.y, ee_target_.z);
   bool is_target_on_right = (ee_target_.y < 0);
 
+  // ====== slow mode ======
+  std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
   switch(loop_squence)
   {
     case 0: // task space까지 접근 or IK 모듈로 접근 가능 여부 확인
@@ -193,12 +196,35 @@ void MainNode::mainLoop()
       break;
 
     case 1: // EE 경로 생성
-      if (!trajectory_generated_) {
-        double push_yaw = initial_yaw_ + M_PI / 2.0;  // 벽과 수직하는 경로로 밀기
-        trajectory_ = planner_.generateVerticalPushTrajectory(current_target, push_yaw, approach_distance_ , duration_, dt_);  // 수정 필요
+      if (!trajectory_generated_)
+      {
+        double push_yaw = initial_yaw_ + M_PI / 2.0;
+        trajectory_ = planner_.generateVerticalPushTrajectory(current_target, push_yaw, approach_distance_, duration_, dt_);
         trajectory_index_ = 0;
         trajectory_generated_ = true;
-        RCLCPP_INFO(this->get_logger(), "Trajectory generated.");
+        RCLCPP_INFO(this->get_logger(), "Trajectory generated with %ld points.", trajectory_.size());
+
+        // 생성된 경로에 대해 IK 계산 가능성 확인
+        // ========================================
+        int failure_count = 0;
+        for (size_t i = 0; i < trajectory_.size(); ++i) {
+          auto point = trajectory_[i];
+          auto q_opt = ik_module_->computeIK(point);
+          if (!q_opt.has_value()) {
+            RCLCPP_WARN(this->get_logger(), "[DEBUG] IK failed at point %lu: (%.3f, %.3f, %.3f)",
+                        i, point.x(), point.y(), point.z());
+            failure_count++;
+          }
+        }
+
+        if (failure_count == 0) {
+          RCLCPP_INFO(this->get_logger(), "[DEBUG] All IK computations succeeded for trajectory.");
+        } else {
+          RCLCPP_WARN(this->get_logger(), "[DEBUG] IK failed on %d / %lu trajectory points",
+                      failure_count, trajectory_.size());
+        }
+        // ========================================
+
         loop_squence = 2;
       }
       break;

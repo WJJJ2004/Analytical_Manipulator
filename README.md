@@ -23,6 +23,8 @@
 - 관련 매트랩 코드 레포 링크: https://github.com/WJJJ2004/Analytical_IK_solver
 - ROS2 URDF 패키지 : https://github.com/WJJJ2004/torsoHumanoid2025
 
+<img width="1920" height="1074" alt="image" src="https://github.com/user-attachments/assets/eed3e490-2914-4d96-aa13-3113127fed14" />
+
 ---
 
 ## 설치 및 실행 방법
